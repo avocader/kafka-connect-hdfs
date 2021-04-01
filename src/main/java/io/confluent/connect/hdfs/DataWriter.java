@@ -17,6 +17,7 @@ package io.confluent.connect.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hive.metastore.api.FieldSchema;
 import org.apache.hadoop.security.SecurityUtil;
@@ -68,6 +69,7 @@ public class DataWriter {
   private static final Logger log = LoggerFactory.getLogger(DataWriter.class);
   private static final Time SYSTEM_TIME = new SystemTime();
   private final Time time;
+  private UserGroupInformation ugi;
 
   private final Map<TopicPartition, TopicPartitionWriter> topicPartitionWriters;
   private String url;
@@ -99,7 +101,6 @@ public class DataWriter {
       AvroData avroData
   ) {
     this(connectorConfig, context, avroData, SYSTEM_TIME);
-
   }
 
   @SuppressWarnings("unchecked")
@@ -170,7 +171,7 @@ public class DataWriter {
         // replace the _HOST specified in the principal config to the actual host
         String principal = SecurityUtil.getServerPrincipal(principalConfig, hostname);
         UserGroupInformation.loginUserFromKeytab(principal, keytab);
-        final UserGroupInformation ugi = UserGroupInformation.getLoginUser();
+        ugi = UserGroupInformation.getLoginUser();
         log.info("Login as: " + ugi.getUserName());
 
         final long renewPeriod = connectorConfig.getLong(
@@ -186,6 +187,7 @@ public class DataWriter {
                 try {
                   DataWriter.this.wait(renewPeriod);
                   if (isRunning) {
+                    log.info("Doing a re-login from a keytab for ugi: {}", ugi);
                     ugi.reloginFromKeytab();
                   }
                 } catch (IOException e) {
@@ -494,6 +496,14 @@ public class DataWriter {
         isRunning = false;
         this.notifyAll();
       }
+    }
+    try {
+      if (ugi != null) {
+        log.info("Closing all cached filesystems for ugi: {}", ugi);
+        FileSystem.closeAllForUGI(ugi);
+      }
+    } catch (IOException e) {
+      log.warn("Failed to close all cached filesystems for ugi", e);
     }
   }
 

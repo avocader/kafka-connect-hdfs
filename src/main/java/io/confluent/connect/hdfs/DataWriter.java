@@ -69,7 +69,6 @@ public class DataWriter {
   private static final Logger log = LoggerFactory.getLogger(DataWriter.class);
   private static final Time SYSTEM_TIME = new SystemTime();
   private final Time time;
-  private UserGroupInformation ugi;
 
   private final Map<TopicPartition, TopicPartitionWriter> topicPartitionWriters;
   private String url;
@@ -171,7 +170,7 @@ public class DataWriter {
         // replace the _HOST specified in the principal config to the actual host
         String principal = SecurityUtil.getServerPrincipal(principalConfig, hostname);
         UserGroupInformation.loginUserFromKeytab(principal, keytab);
-        ugi = UserGroupInformation.getLoginUser();
+        final UserGroupInformation ugi = UserGroupInformation.getLoginUser();
         log.info("Login as: " + ugi.getUserName());
 
         final long renewPeriod = connectorConfig.getLong(
@@ -200,6 +199,12 @@ public class DataWriter {
                   // ignored
                 }
               }
+              try {
+                log.info("Closing all cached filesystems for ugi: {}", ugi);
+                FileSystem.closeAllForUGI(ugi);
+              } catch (IOException e) {
+                log.warn("Failed to close all cached filesystems for ugi", e);
+              }
             }
           }
         });
@@ -218,7 +223,7 @@ public class DataWriter {
           HdfsSinkConnectorConfig.class,
           connectorConfig,
           url
-      );
+      ); //this creates one cache entry, which is cleaned
 
       createDir(topicsDir);
       createDir(topicsDir + HdfsSinkConnectorConstants.TEMPFILE_DIRECTORY);
@@ -371,7 +376,7 @@ public class DataWriter {
     }
 
     for (TopicPartition tp : topicPartitionWriters.keySet()) {
-      topicPartitionWriters.get(tp).write();
+      topicPartitionWriters.get(tp).write(); //this creates topicPartitionWriters.size() cache entries
     }
   }
 
@@ -496,14 +501,6 @@ public class DataWriter {
         isRunning = false;
         this.notifyAll();
       }
-    }
-    try {
-      if (ugi != null) {
-        log.info("Closing all cached filesystems for ugi: {}", ugi);
-        FileSystem.closeAllForUGI(ugi);
-      }
-    } catch (IOException e) {
-      log.warn("Failed to close all cached filesystems for ugi", e);
     }
   }
 

@@ -31,6 +31,7 @@ import org.junit.After;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -354,5 +355,4 @@ public class TestWithMiniDFSCluster extends HdfsSinkConnectorTestBase {
       assertEquals(avroData.fromConnectData(expectedSchema, expectedValue), avroRecord);
     }
   }
-
 }

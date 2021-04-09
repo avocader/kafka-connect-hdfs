@@ -331,7 +331,7 @@ public class WALFile {
       } finally {
         if (fs != null) {
           try {
-            fs.close();
+            fs.close(); //this deletes 1 entry from cache
           } catch (Throwable t) {
             log.error("Could not close FileSystem", t);
           }

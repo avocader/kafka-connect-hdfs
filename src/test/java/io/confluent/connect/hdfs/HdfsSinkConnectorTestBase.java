@@ -16,11 +16,13 @@
 package io.confluent.connect.hdfs;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.kafka.common.TopicPartition;
 import org.apache.kafka.connect.data.Schema;
 import org.apache.kafka.connect.data.Struct;
 import org.junit.After;
 
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -122,5 +124,15 @@ public class HdfsSinkConnectorTestBase extends StorageSinkTestBase {
   @Override
   public void tearDown() throws Exception {
     super.tearDown();
+  }
+
+  protected Map getFileSystemCache() throws NoSuchFieldException, IllegalAccessException {
+    Field cacheField = FileSystem.class.getDeclaredField("CACHE");
+    cacheField.setAccessible(true);
+    Object cache = cacheField.get(Object.class);
+    Field cacheMapField = cache.getClass().getDeclaredField("map");
+    cacheMapField.setAccessible(true);
+    Map cacheMap = (Map)cacheMapField.get(cache);
+    return cacheMap;
   }
 }

@@ -392,7 +392,7 @@ public class TopicPartitionWriter {
             closeTempFile();
             nextState();
           case TEMP_FILE_CLOSED:
-            appendToWAL();
+            appendToWAL(); //this create a one cache entry
             nextState();
           case WAL_APPENDED:
             commitFile();
@@ -818,7 +818,7 @@ public class TopicPartitionWriter {
 
   private void beginAppend() {
     if (!appended.contains(WAL.beginMarker)) {
-      wal.append(WAL.beginMarker, "");
+      wal.append(WAL.beginMarker, ""); //this creates a cache entry
     }
   }
 

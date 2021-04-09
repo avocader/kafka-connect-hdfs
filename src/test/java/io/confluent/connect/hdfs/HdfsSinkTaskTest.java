@@ -33,7 +33,6 @@ import java.util.Map;
 
 import io.confluent.connect.avro.AvroData;
 import io.confluent.connect.hdfs.avro.AvroDataFileReader;
-import io.confluent.connect.hdfs.avro.AvroFileReader;
 import io.confluent.connect.hdfs.storage.HdfsStorage;
 import io.confluent.connect.storage.StorageFactory;
 import io.confluent.connect.storage.common.StorageCommonConfig;
@@ -252,6 +251,9 @@ public class HdfsSinkTaskTest extends TestWithMiniDFSCluster {
     setUp();
     HdfsSinkTask task = new HdfsSinkTask();
 
+    Map fileSystemCache = getFileSystemCache();
+    int fsSizeBefore = fileSystemCache.size();
+
     String key = "key";
     Schema schema = createSchema();
     Struct record = createRecord(schema);
@@ -267,6 +269,8 @@ public class HdfsSinkTaskTest extends TestWithMiniDFSCluster {
     task.start(properties);
     task.put(sinkRecords);
     task.stop();
+    task.close(context.assignment());
+    assertEquals(fsSizeBefore, fileSystemCache.size());
 
     AvroData avroData = task.getAvroData();
     // Last file (offset 6) doesn't satisfy size requirement and gets discarded on close

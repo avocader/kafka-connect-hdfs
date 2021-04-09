@@ -72,7 +72,7 @@ public class FSWAL implements WAL {
       try {
         if (writer == null) {
           writer = WALFile.createWriter(conf, Writer.file(new Path(logFile)),
-                                        Writer.appendIfExists(true));
+                                        Writer.appendIfExists(true)); //this creates one cache entry
           log.info(
               "Successfully acquired lease, {}-{}, file {}",
               conf.getName(),
